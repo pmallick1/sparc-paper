@@ -71,25 +71,28 @@ Modeling protein folding has numerous biological applications, including active 
 However, the most detailed simulations must incorporate hundreds of atoms at picosecond time intervals, which currently prohibits the timescale on which these simulations can be computed.
 Therefore, many biological applications would benefit from a coarse-grained approach that preserves as much detail as possible from atomistic methods.
 
-The thermodynamic hypothesis indicates that the native structure corresponds to the free energy minimum of all possible conformational states of the protein \cite{anfinsen}.
-Therefore, the crux of structure prediction methods is to accurately express the energy of a protein in a given state, itself a challenge because of the difficulty in experimental analysis of unfolded or partially-folded proteins \cite{dill}. 
+The thermodynamic hypothesis, proposed by Anfinsen, stipulates that the native structure corresponds to the free energy minimum of all possible conformational states of the protein \cite{anfinsen}.
+Therefore, the crux of structure prediction methods is to accurately express the energy of a protein in a given state. 
 Energy functions generally fall under two categories: ``physics-based'' and ``knowledge-based potentials'' \cite{lu}.
 Physics-based potentials and force fields, such as CHARMM \cite{brooks}, AMBER \cite{amber}, and GROMOS \cite{gromos}, evaluate conventional bonded and nonbonded energy terms (e.g. bond stretch, dihedral angle, and Coulombic potentials) for all atoms in a structure \cite{brooks2}.
 These atomistic potentials can be made coarse-grained by modeling residues as one or a few particles, or by considering groups of residues as rigid subparts \cite{basdevant,potestio,enciso,monticelli}.
-However, physics-based potentials necessitate either the inclusion of explicit solvent molecules \cite{onufriev} or the use of implicit solvent models such as the generalized Born formalism \cite{feig,roux}, rendering them computationally inefficient if not intractable in molecular dynamics (MD) applications.
+However, physics-based potentials necessitate either the inclusion of explicit solvent molecules in the simulation \cite{onufriev} or the use of implicit solvent techniques such as the generalized Born/solvent-accessible surface area (GBSA) model \cite{feig,roux}.
+This tends to render all-atom force fields computationally inefficient if not intractable in large-scale molecular dynamics (MD) applications.
 
-The latter type of energy function, knowledge-based potentials (KBPs), are based on statistical analysis of known protein structures rather than distinct physical or chemical interactions. 
-The use of these so-called ``statistical potentials'' was pioneered by Tanaka and Scheraga \cite{tanaka}, then Miyazawa and Jernigan \cite{miyazawa}, who estimated inter-residue interaction energies by counting contacts (pairs of residues located within a certain cut-off distance of each other) between types of amino acids in known protein structures.
+The second type of energy function, knowledge-based potentials (KBPs), have developed as an approximative substitute for physics-based potentials and are more efficient at comparative tasks such as the gapless threading problem, which involves choosing the most likely native structure out of a series of candidates \cite{thomas2}.
+KBPs, also known as ``statistical potentials,'' are based on statistical analysis of known protein structures rather than distinct physical or chemical interactions. 
+The use of KBPs was pioneered by Tanaka and Scheraga \cite{tanaka}, then Miyazawa and Jernigan \cite{miyazawa}, who estimated inter-residue interaction energies by counting contacts (pairs of residues located within a certain cut-off distance of each other) between types of amino acids in known protein structures.
+
 The underlying assumption in assembling these statistical energy functions is that the known structures, usually obtained by X-ray crystallography or NMR, correspond to equilibrium states \cite{buchete2003}. 
 As a consequence, the frequency of a local structure (e.g. a contact, distance, or relative orientation) can be related to its conformational energy according to the Boltzmann distribution.
 This yields the following commonly-used expression for calculating energies by statistical analysis:
 
 \begin{equation}
-E(s) = -kT\ln{f(s)}
+E(s) = -kT\ln{P(s)}
 \label{boltzmann_device}
 \end{equation}
 
-where $s$ represents a local conformation, $k$ is Boltzmann's constant, $T$ is the temperature, and $f(s)$ is the probability of the state occurring in equilibrium \cite{sippl}.
+where $s$ represents a local conformation, $k$ is Boltzmann's constant, $T$ is the temperature, and $P(s)$ is the probability of the state occurring in equilibrium \cite{sippl}.
 
 Beyond contact potentials, various methods have also been developed based on the distribution of Euclidean distances between residues, such as DOPE \cite{shen}, DFIRE \cite{zhou}, GOAP \cite{zhou2}, and others \cite{lu,zhang}.
 A few studies have incorporated anisotropic factors by comparing the orientations of the sidechains \cite{zhang3,mukherjee} or by measuring polar, spherical and/or Euler angles between two contacting residues \cite{miyazawa2,buchete2003}. 
@@ -101,24 +104,6 @@ We describe the methods used to derive SPARC from the database of known protein 
 SPARC is then evaluated based on its performance on the gapless threading problem in comparison to other statistical potentials, and tested in a new segmented dynamic Monte Carlo simulation of protein folding.
 
 \section{Methods}
-In order to avoid the statistical pitfalls of other orientation-based potentials which must add other non-orientational terms to accurately emulate protein energies, we approached the problem of residue-residue interactions from a \emph{purely} orientational standpoint.
-
-\subsection{Construction of local coordinate system}
-Given a protein of $n$ amino acids, we can assign a Cartesian local coordinate system (LCS) to each residue to quantify its orientation with respect to an arbitrary global coordinate system (GCS).
-To determine a set of basis vectors that is consistent across all 20 sidechain types, we turn to the ideal bond angles predicted by valence-shell electron-pair repulsion (VSEPR) theory \cite{gillespie}.
-As shown in Fig. \ref{aminoacid_axes}, the bond geometry around the C$_\alpha$ atom is approximately tetrahedral, with bond angles of $\cos^{-1}{1/3}\approx 109.5^\circ$.
-
-Defining $\textbf{n}$ and $\textbf{c}$ as the normalized vectors in the GCS pointing from C$_\alpha$ to the amine nitrogen and carbonyl carbon, respectively, we define $\textbf{j} \equiv \pm(\textbf{n} - \textbf{c})$, with the sign that minimizes the angle between \textbf{j} and \textbf{c}.
-We proceed with the \textbf{k} vector, which should lie along the bond leading to the sidechain (or a hydrogen atom in the case of glycine), by using the VSEPR-derived relations
-
-\begin{align*}
-\textbf{n}\cdot\textbf{k} &= 1/3
-\\ \textbf{c}\cdot\textbf{k} &= 1/3
-\\ ||\textbf{k}|| &= 1
-\end{align*}
-
-Solving this linear-quadratic system for \textbf{k} yields two solutions, each of which has an associated $\textbf{i}=\textbf{j}\times\textbf{k}$.
-We choose the \textbf{i}/\textbf{k} pair that maximizes the angle between \textbf{i} and \textbf{c}, which produces an LCS consistent with Fig. \ref{aminoacid_axes}.
 
 \begin{figure}
 	\begin{center}
@@ -138,13 +123,64 @@ We choose the \textbf{i}/\textbf{k} pair that maximizes the angle between \textb
 	\label{aminoacid_axes}
 \end{figure}
 
+\subsection{Construction of local coordinate system}
+Given a protein of $n$ amino acids, we can assign a Cartesian local coordinate system (LCS) to each residue to quantify its orientation with respect to an arbitrary global coordinate system (GCS).
+To determine a set of basis vectors that is consistent across all 20 sidechain types, we turn to the ideal bond angles predicted by valence-shell electron-pair repulsion (VSEPR) theory \cite{gillespie}.
+As shown in Fig. \ref{aminoacid_axes}, the bond geometry around the C$_\alpha$ atom is approximately tetrahedral, with bond angles of $\cos^{-1}{1/3}\approx 109.5^\circ$.
+
+Defining $\textbf{n}$ and $\textbf{c}$ as the normalized vectors in the GCS pointing from C$_\alpha$ to the amine nitrogen and carbonyl carbon, respectively, we define $\textbf{j} \equiv \pm(\textbf{n} - \textbf{c})$, with the sign that minimizes the angle between \textbf{j} and \textbf{c}.
+We proceed with the \textbf{k} vector, which should lie along the bond leading to the sidechain (or a hydrogen atom in the case of glycine), by using the VSEPR-derived relations
+
+\begin{align*}
+\textbf{n}\cdot\textbf{k} &= 1/3
+\\ \textbf{c}\cdot\textbf{k} &= 1/3
+\\ ||\textbf{k}|| &= 1
+\end{align*}
+
+Solving this linear-quadratic system for \textbf{k} yields two solutions, each of which has an associated vector $\textbf{i}=\textbf{j}\times\textbf{k}$.
+We choose the pair that maximizes the angle between \textbf{i} and \textbf{c}, which produces an LCS consistent with Fig. \ref{aminoacid_axes}.
+
 \subsection{From orientational frequencies to energies}
-The Cartesian LCS for each amino acid allows us to describe the relative orientation between any two amino acids $\textbf{p}$ and $\textbf{q}$ as simply the coordinates of $\textbf{a}_p$ in the LCS of $\textbf{a}_q$ and vice versa.
-From the Boltzmann device \cite{sippl} to the orientation-based model, an adaptation of Eq. \ref{boltzmann_device} is used to calculate a dimensionless energylike quantity:
+The Cartesian LCS for each amino acid enables us to describe the relative orientation between any two amino acids $\textbf{p}$ and $\textbf{q}$ as simply the coordinates of $\textbf{p}$ in the LCS of $\textbf{q}$, denoted $\textbf{p}_q$, and vice versa.
+To obtain a distribution of relative orientations for each sidechain type, we consider only those amino acids within a contact sphere of radius 10 \AA\, of each residue.
+The orientation space is coarse-grained into intervals of 1 \AA\, for a total of 8,000 possible ``bins'' into which each relative location might fall.
+
+Assuming that these pairwise orientations follow the Boltzmann distribution in an ensemble of native protein structures \cite{sippl}, Eq. (\ref{boltzmann_device}) can be adapted to calculate a dimensionless energylike quantity:
+\begin{equation}
+\displaystyle
+S(\textbf{p}, \textbf{q}) \equiv -\left(\ln{\frac{f(\textbf{p}_q)f_{pq,\text{tot}}}{\bar{f}_{pq}\bar{f}_\text{tot}}} + \ln{\frac{f(\textbf{q}_p)f_{pq,\text{tot}}}{\bar{f}_{pq}\bar{f}_\text{tot}}}\right)
+\label{sparc_equation}
+\end{equation}
+In this equation, which defines the inter-residue component of SPARC, $f(\textbf{p}_q)$ refers to the frequency of an interaction between amino acids of type $p$ and $q$ with that particular relative location. 
+$\bar{f}_{pq}$ represents the mean frequency over all bins, and $f_{pq,\text{tot}}$ the total number of contacts for these amino acid types (e.g. alanine and tyrosine, glycine and glutamine, etc.).
+$\bar{f}_\text{tot}$ is the mean number of contacts over all combinations of amino acid types.
+The result of this formulation is that contacts whose relative orientations are above average receive a more negative (stable) score.
+Furthermore, for a perfectly average orientation, a more negative score will result if contacts between amino acid types $p$ and $q$ are more frequent in the native ensemble.
+
+Another important consideration when constructing SPARC was chain connectivity, since it is presumed that amino acids adjacent to each other along the peptide backbone interact differently (due to the presence of connecting covalent bonds) than non-consecutive residues.
+Therefore, the consecutive and non-consecutive amino acids found within the 10-\AA\, shell were separated and analyzed separately, producing two distinct score functions $S_c$ and $S_{nc}$.
+
+\subsection{Solvent interaction model}
+In a simplified sense, the intermolecular interactions that determine the stability of a protein structure can be decomposed into those between residues and those between residues and the solvent.
+The latter interactions cannot be modeled by orientation in an implicit solvent, so they are collectively modeled by SPARC in terms of the ``coordination number'' or packing density of the residues.
+This approximation is similar to the coordination numbers used by Miyazawa and Jernigan \cite{miyazawa}; however, instead of calculating the values indirectly from the volume of each residue type, we simply count the number of amino acids within the contact sphere.
+The analog for eq. (\ref{sparc_equation}) for the solvent interactions then becomes
 
 \begin{equation}
-S(\)
+S_{\text{solv}}(\textbf{p})\equiv -\ln{\frac{f(|A_p^*|)}{\bar{f}_p}},
+\label{solvent_equation}
 \end{equation}
+
+where $A_p^*$ represents the set of amino acids within the cutoff distance and $\bar{f}_p$ the mean frequency over the possible coordination numbers for amino acid type $p$.
+The energylike quantities represented by $S_c$, $S_{nc}$, and $S_\text{solv}$ are finally added together to produce an overall SPARC score value.
+
+\subsection{Dynamic Monte Carlo simulation}
+
+\subsection{Materials and software}
+All calculations and programs were run on an off-the-shelf laptop computer and a desktop.
+Written in Python 2.7 and comprising about 6,000 lines of code, this first version of the SPARC software contains tools for reading and writing PDB files, analyzing structures for orientation data directly from the Protein Data Bank, and running the dynamic Monte Carlo simulations as well as other utilities, with all modules designed to be subclassable and extendible for future modifications.
+
+To calculate the orientational frequencies, a large dataset of native protein structures determined using X-ray crystallography (91,995 total structures) was obtained from the Protein Data Bank.
 
 \section{Results}
 
