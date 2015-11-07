@@ -1,4 +1,4 @@
-\documentclass[11pt,twocolumn]{article}
+\documentclass[11pt]{article}
 
 % Pretty much all of the ams maths packages
 \usepackage{amsmath,amsthm,amssymb,amsfonts}
@@ -8,6 +8,7 @@
 
 % Removes paragraph indentation (not needed most of the time now)
 \usepackage{parskip}
+\usepackage{setspace}
 
 % Allows inclusion of graphics easily and configurably
 \usepackage{graphicx}
@@ -20,10 +21,12 @@
 
 \usepackage{titlesec}
 
-\usepackage{mathptmx}
+%\usepackage{mathptmx}
 \usepackage{chemfig}
 \usepackage{tikz}
 \usetikzlibrary{arrows,positioning,shapes.geometric,shapes.misc}
+
+\usepackage{authblk}
 
 % Allows shading of table cells
 \usepackage{colortbl}
@@ -48,13 +51,19 @@
 
 % Vastly improves the standard formatting of captions
 \usepackage[margin=10pt,font=small,labelfont=bf, labelsep=endash]{caption}
+\renewcommand{\baselinestretch}{1.5}
 
-\titleformat{\subsection}
-{\normalfont\itshape}{\thesubsection}{1em}{}
+%\titleformat{\subsection}
+%{\normalfont\itshape}{\thesubsection}{1em}{}
 
 %opening
 \title{A Novel Orientation-Dependent Potential for \\Protein Structure Prediction}
-\author{Venkatesh Sivaraman, Bexley High School}
+\author[1]{Venkatesh Sivaraman}
+\author[2,3]{Eshel Faraggi}
+\author[3]{Andrzej Kloczkowski}
+\affil[1]{Bexley High School}
+\affil[2]{IUPUI}
+\affil[3]{The Ohio State University}
 
 \begin{document}
 
@@ -100,7 +109,7 @@ In general orientation-dependent energy terms based on bond angles are also comb
 Moreover, these statistical potentials may be limited by their concern with only the backbone or the sidechains, as well as failure to consider the tendency of hydrophobic residues to move toward solvent-inaccessible regions \cite{mullinax}.
 
 This paper presents a new anisotropic statistical potential, called Segmented Positional Analysis of Residue Contacts (SPARC), that addresses concerns with other statistical methods by generalizing the expression of amino acid orientations through local coordinate system transformations.
-We describe the methods used to derive SPARC from the database of known protein structures, as well as a ``coordination number''-based implicit solvent interaction model extended from Miyazawa and Jernigan \cite{miyazawa}.
+We describe the methods used to derive SPARC from the database of known protein structures, as well as a ``coordination number''-based implicit solvent interaction model.
 SPARC is then evaluated based on its performance on the gapless threading problem in comparison to other statistical potentials, and tested in a new segmented dynamic Monte Carlo simulation of protein folding.
 
 \section{Methods}
@@ -124,7 +133,7 @@ SPARC is then evaluated based on its performance on the gapless threading proble
 \end{figure}
 
 \subsection{Construction of local coordinate system}
-Given a protein of $n$ amino acids, we can assign a Cartesian local coordinate system (LCS) to each residue to quantify its orientation with respect to an arbitrary global coordinate system (GCS).
+Given a protein $A$ of $n$ amino acids, we can assign a Cartesian local coordinate system (LCS) to each residue to quantify its orientation with respect to an arbitrary global coordinate system (GCS).
 To determine a set of basis vectors that is consistent across all 20 sidechain types, we turn to the ideal bond angles predicted by valence-shell electron-pair repulsion (VSEPR) theory \cite{gillespie}.
 As shown in Fig. \ref{aminoacid_axes}, the bond geometry around the C$_\alpha$ atom is approximately tetrahedral, with bond angles of $\cos^{-1}{1/3}\approx 109.5^\circ$.
 
@@ -135,17 +144,17 @@ We choose the pair that maximizes the angle between \textbf{i} and \textbf{c}, w
 
 \subsection{From orientational frequencies to energies}
 The Cartesian LCS for each amino acid enables us to describe the relative orientation between any two amino acids $\textbf{p}$ and $\textbf{q}$ as simply the coordinates of $\textbf{p}$ in the LCS of $\textbf{q}$, denoted $\textbf{p}_q$, and vice versa.
-To obtain a distribution of relative orientations for each sidechain type, we consider only those amino acids within a contact sphere of radius 10 \AA\, of each residue.
+To obtain a distribution of relative orientations for each sidechain type, we consider only those amino acids within a contact sphere of radius 10 \AA\, of each residue, a set we denote $A^*$.
 The orientation space is coarse-grained into intervals of 1 \AA\, for a total of 8,000 possible ``bins'' into which each relative location might fall.
 
 As in all statistical potentials, SPARC assumes that these pairwise orientations follow the Boltzmann distribution in an ensemble of native protein structures \cite{sippl}, motivated by the fact that even at a free energy minimum, unstable \textit{local} structures can still be found.
 This permits us to adapt Eq. (\ref{boltzmann_device}) to calculate a dimensionless energylike quantity from the orientational frequencies:
 \begin{equation}
 \displaystyle
-S(\textbf{p}, \textbf{q}) \equiv -\left(\ln{\frac{f(\textbf{p}_q)f_{pq,\text{tot}}}{\bar{f}_{pq}\bar{f}_\text{tot}}} + \ln{\frac{f(\textbf{q}_p)f_{pq,\text{tot}}}{\bar{f}_{pq}\bar{f}_\text{tot}}}\right)
+S(\textbf{p}) = -\sum_{\textbf{q}\in A_p^*} \left(\ln{\frac{f(\textbf{p}_q)f_{pq,\text{tot}}}{\bar{f}_{pq}\bar{f}_\text{tot}}} + \ln{\frac{f(\textbf{q}_p)f_{pq,\text{tot}}}{\bar{f}_{pq}\bar{f}_\text{tot}}}\right)
 \label{sparc_equation}
 \end{equation}
-In this equation, which defines the inter-residue component of SPARC, $f(\textbf{p}_q)$ refers to the frequency of an interaction between amino acids of type $p$ and $q$ with that particular relative location. 
+In this equation, which sums over all amino acids within the contact sphere $A_p^*$, $f(\textbf{p}_q)$ refers to the frequency of an interaction between amino acids of type $p$ and $q$ with that particular relative location. 
 $\bar{f}_{pq}$ represents the mean frequency over all bins, and $f_{pq,\text{tot}}$ the total number of contacts for these amino acid types (e.g. alanine and tyrosine, glycine and glutamine, etc.).
 $\bar{f}_\text{tot}$ is the mean number of contacts over all combinations of amino acid types.
 The result of this formulation is that contacts whose relative orientations are above average receive a more negative (stable) score.
@@ -161,54 +170,70 @@ This approximation is similar to the coordination numbers used by Miyazawa and J
 The analog for eq. (\ref{sparc_equation}) for the solvent interactions then becomes
 
 \begin{equation}
-S_{\text{solv}}(\textbf{p})\equiv -\ln{\frac{f(|A_p^*|)}{\bar{f}_p}},
+S_{\text{solv}}(\textbf{p}) = -\ln{\frac{f(|A_p^*|)}{\bar{f}_p}},
 \label{solvent_equation}
 \end{equation}
 
-where $A_p^*$ represents the set of amino acids within the cutoff distance and $\bar{f}_p$ the mean frequency over the possible coordination numbers for amino acid type $p$.
-The energylike quantities represented by $S_c$, $S_{nc}$, and $S_\text{solv}$ are finally added together to produce an overall SPARC score value.
+where $\bar{f}_p$ is the mean frequency over the possible coordination numbers for amino acid type $p$.
+The energylike quantities represented by $S_c$, $S_{nc}$, and $S_\text{solv}$ are finally combined linearly to produce an overall SPARC score value.
 
 \subsection{Dynamic Monte Carlo simulation}
+\begin{figure}
+	\begin{center}
+		\setstretch{1.0}
+		\small
+		\begin{tikzpicture}[scale=0.8, every node/.style={scale=0.8}]
+		\draw [->, >=stealth] (0,-1.5) -- (0, -2);
+		\draw [->, >=stealth] (0,-2.5) -- (0, -3.6);
+		\draw [->, >=stealth] (0,-4.5) -- (0, -5.2);
+		\draw [->, >=stealth] (0,-5.8) -- (4.2, -5.8);
+		\draw [->, >=stealth] (6, -5.8) -- (6, -3);
+		\draw [->, >=stealth] (3.6, -2.6) -- (2, -2.6);
+		\draw [->, >=stealth] (6, -6.6) -- (6, -7.7);
+		\draw [->, >=stealth] (6, -8.7) -- (1.6, -8.7);
+		\draw (6, -8.7) -- (6, -10) --(-3, -10)  -- (-3, -8.7);
+		\draw [->, >=stealth] (0, -8.7) -- (-3, -8.7) -- (-3, -2.6) -- (-2, -2.6);
+		\draw [->, >=stealth] (0, -10) -- (0, -10.5);
+		
+		\node [draw, rounded rectangle, fill=white] at (0, -1.2) {Input: random coil};
+		\draw [fill=white,text width=3.8cm,align=center] (-2,-2) rectangle (2,-3.2) node[pos=.5] {Choose a segment of the protein to ``mutate''};
+		\draw [fill=white,text width=3cm,align=center] (-1.6,-3.6) rectangle (1.6,-4.8) node[pos=.5] {Generate possible conformations};
+		\draw [fill=white,text width=4.5cm,align=center] (-2.4,-5.2) rectangle (2.4,-6.4) node[pos=.5] {Choose a conformation, weighted by energy $\sum S(\textbf{x})$};
+		\node [draw, diamond, fill=white, aspect=2] at (6, -5.8) {Disconnected?};
+		\node [fill, white, rectangle, text=black] at (6, -4) {Yes};
+		\node [fill, white, rectangle, text=black] at (6, -7.2) {No};
+		\node [draw, diamond, fill=white, aspect=2] at (6, -8.7) {Steric violation?};
+		\draw [fill=white,text width=4.4cm,align=center] (3.6,-2.2) rectangle (8.4,-3) node[pos=.5] {Move to adjacent segments};
+		\node [fill, white, rectangle, text=black] at (3, -8.7) {Yes};
+		\node [fill, white, rectangle, text=black] at (3, -10) {No};
+		\draw [fill=white,text width=3cm,align=center] (-1.6,-8.1) rectangle (1.6,-9.3) node[pos=.5] {Revert to last conformation};
+		\node [draw, rounded rectangle, fill=white] at (0, -10.8) {End after specified \# of iterations};
+		\end{tikzpicture}
+	\end{center}
+	\caption{An overview of a Markov chain Monte Carlo (MCMC) simulation algorithm developed using SPARC. The procedure is similar to that of the Metropolis-Hastings algorithm in that new structures are sampled so that better-scoring conformations are chosen more often.}
+	\label{flowchart}
+\end{figure}
 The statistical nature of SPARC makes it especially conducive to a Markov chain Monte Carlo (MCMC) simulation because it provides direct local stability comparisons which can be used to sample the conformational space.
 Monte Carlo simulations have been used with some frequency to predict protein structure \cite{kolinski,enciso}, though not as often or as successfully as deterministic molecular dynamics (MD).
 The most widely-used MCMC technique is the Metropolis-Hastings algorithm, which uses a weighted form of rejection sampling to approximate a distribution over a large number of iterations \cite{metropolis}.
-We utilize a modified version of the Metropolis-Hastings algorithm based on the distribution of relative orientations in SPARC.
+We implement a modified version of the Metropolis-Hastings algorithm based on the distribution of relative orientations in SPARC.
 
 An overview of the simulation algorithm is presented in Fig. \ref{flowchart}.
+During each iteration, segments containing 1--5 residues are chosen at random, with short segment lengths favored in unstable structures and longer segments favored in stable structures.
+This allows us to control the preservation of locally-stabilizing interactions.
+The SPARC scores of each possible ``mutation'' to the chosen segment are transformed into probabilities:
 
-\begin{figure}
-\begin{center}
-	\begin{tikzpicture}[scale=0.7, every node/.style={scale=0.7}]
-	\draw [->, >=stealth] (0,-1.5) -- (0, -2);
-	\draw [->, >=stealth] (0,-2.5) -- (0, -3.6);
-	\draw [->, >=stealth] (0,-4.5) -- (0, -5.2);
-	\draw [->, >=stealth] (0,-5.8) -- (4.2, -5.8);
-	\draw [->, >=stealth] (6, -5.8) -- (6, -3);
-	\draw [->, >=stealth] (3.6, -2.6) -- (2, -2.6);
-	\draw [->, >=stealth] (6, -6.6) -- (6, -7.7);
-	\draw [->, >=stealth] (6, -8.7) -- (1.6, -8.7);
-	\draw (6, -8.7) -- (6, -10) --(-3, -10)  -- (-3, -8.7);
-	\draw [->, >=stealth] (0, -8.7) -- (-3, -8.7) -- (-3, -2.6) -- (-2, -2.6);
-	\draw [->, >=stealth] (0, -10) -- (0, -10.5);
-	
-	\node [draw, rounded rectangle, fill=white] at (0, -1.2) {Input: random coil};
-	\draw [fill=white,text width=3.8cm,align=center] (-2,-2) rectangle (2,-3.2) node[pos=.5] {Choose a segment of the protein to ``mutate''};
-	\draw [fill=white,text width=3cm,align=center] (-1.6,-3.6) rectangle (1.6,-4.8) node[pos=.5] {Generate possible conformations};
-	\draw [fill=white,text width=4.5cm,align=center] (-2.4,-5.2) rectangle (2.4,-6.4) node[pos=.5] {Choose a conformation, weighted by energy $\sum S(\textbf{x})$};
-	\node [draw, diamond, fill=white, aspect=2] at (6, -5.8) {Disconnected?};
-	\node [fill, white, rectangle, text=black] at (6, -4) {Yes};
-	\node [fill, white, rectangle, text=black] at (6, -7.2) {No};
-	\node [draw, diamond, fill=white, aspect=2] at (6, -8.7) {Steric violation?};
-	\draw [fill=white,text width=4.4cm,align=center] (3.6,-2.2) rectangle (8.4,-3) node[pos=.5] {Move to adjacent segments};
-	\node [fill, white, rectangle, text=black] at (3, -8.7) {Yes};
-	\node [fill, white, rectangle, text=black] at (3, -10) {No};
-	\draw [fill=white,text width=3cm,align=center] (-1.6,-8.1) rectangle (1.6,-9.3) node[pos=.5] {Revert to last conformation};
-	\node [draw, rounded rectangle, fill=white] at (0, -10.8) {End after specified \# of iterations};
-	\end{tikzpicture}
-\end{center}
-	\label{flowchart}
-	\caption{An overview of a Markov chain Monte Carlo (MCMC) simulation algorithm developed using SPARC. The procedure is similar to that of the Metropolis-Hastings algorithm in that new structures are sampled so that better-scoring conformations are chosen more often.}
-\end{figure}
+\begin{equation}
+P(C) = \exp{\left(-\sum_{\textbf{a}_i\in C}S(\textbf{a}_i)\right)}
+\label{probability_eq}
+\end{equation}
+
+A cumulative distribution function is then obtained from the normalized values of $P(C)$, and sampled to determine the next local conformation.
+
+To maintain chain connectivity, two additional modifications to the Metropolis-Hastings approach are necessary. 
+First, the locations of consecutive residues are constrained to orientations found with at least a certain frequency (0.5\%) in the native ensemble.
+This ensures that the bonding between residues is realistic in every structure.
+Second, the neighboring segments of the protein are adjusted to amend the breaks caused by each mutation.
 
 \subsection{Materials and software}
 \label{materials}
