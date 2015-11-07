@@ -23,7 +23,7 @@
 \usepackage{mathptmx}
 \usepackage{chemfig}
 \usepackage{tikz}
-\usetikzlibrary{arrows,positioning}
+\usetikzlibrary{arrows,positioning,shapes.geometric,shapes.misc}
 
 % Allows shading of table cells
 \usepackage{colortbl}
@@ -129,15 +129,8 @@ To determine a set of basis vectors that is consistent across all 20 sidechain t
 As shown in Fig. \ref{aminoacid_axes}, the bond geometry around the C$_\alpha$ atom is approximately tetrahedral, with bond angles of $\cos^{-1}{1/3}\approx 109.5^\circ$.
 
 Defining $\textbf{n}$ and $\textbf{c}$ as the normalized vectors in the GCS pointing from C$_\alpha$ to the amine nitrogen and carbonyl carbon, respectively, we define $\textbf{j} \equiv \pm(\textbf{n} - \textbf{c})$, with the sign that minimizes the angle between \textbf{j} and \textbf{c}.
-We proceed with the \textbf{k} vector, which should lie along the bond leading to the sidechain (or a hydrogen atom in the case of glycine), by using the VSEPR-derived relations
-
-\begin{align*}
-\textbf{n}\cdot\textbf{k} &= 1/3
-\\ \textbf{c}\cdot\textbf{k} &= 1/3
-\\ ||\textbf{k}|| &= 1
-\end{align*}
-
-Solving this linear-quadratic system for \textbf{k} yields two solutions, each of which has an associated vector $\textbf{i}=\textbf{j}\times\textbf{k}$.
+We proceed with the \textbf{k} vector, which should lie along the bond leading to the sidechain (or a hydrogen atom in the case of glycine).
+Solving for \textbf{k} from the bond angles between \textbf{c} and \textbf{n} yields two solutions, each of which has an associated vector $\textbf{i}=\textbf{j}\times\textbf{k}$.
 We choose the pair that maximizes the angle between \textbf{i} and \textbf{c}, which produces an LCS consistent with Fig. \ref{aminoacid_axes}.
 
 \subsection{From orientational frequencies to energies}
@@ -145,7 +138,8 @@ The Cartesian LCS for each amino acid enables us to describe the relative orient
 To obtain a distribution of relative orientations for each sidechain type, we consider only those amino acids within a contact sphere of radius 10 \AA\, of each residue.
 The orientation space is coarse-grained into intervals of 1 \AA\, for a total of 8,000 possible ``bins'' into which each relative location might fall.
 
-Assuming that these pairwise orientations follow the Boltzmann distribution in an ensemble of native protein structures \cite{sippl}, Eq. (\ref{boltzmann_device}) can be adapted to calculate a dimensionless energylike quantity:
+As in all statistical potentials, SPARC assumes that these pairwise orientations follow the Boltzmann distribution in an ensemble of native protein structures \cite{sippl}, motivated by the fact that even at a free energy minimum, unstable \textit{local} structures can still be found.
+This permits us to adapt Eq. (\ref{boltzmann_device}) to calculate a dimensionless energylike quantity from the orientational frequencies:
 \begin{equation}
 \displaystyle
 S(\textbf{p}, \textbf{q}) \equiv -\left(\ln{\frac{f(\textbf{p}_q)f_{pq,\text{tot}}}{\bar{f}_{pq}\bar{f}_\text{tot}}} + \ln{\frac{f(\textbf{q}_p)f_{pq,\text{tot}}}{\bar{f}_{pq}\bar{f}_\text{tot}}}\right)
@@ -155,7 +149,7 @@ In this equation, which defines the inter-residue component of SPARC, $f(\textbf
 $\bar{f}_{pq}$ represents the mean frequency over all bins, and $f_{pq,\text{tot}}$ the total number of contacts for these amino acid types (e.g. alanine and tyrosine, glycine and glutamine, etc.).
 $\bar{f}_\text{tot}$ is the mean number of contacts over all combinations of amino acid types.
 The result of this formulation is that contacts whose relative orientations are above average receive a more negative (stable) score.
-Furthermore, for a perfectly average orientation, a more negative score will result if contacts between amino acid types $p$ and $q$ are more frequent in the native ensemble.
+Furthermore, for a perfectly ``average'' orientation, a more negative score will result if contacts between amino acid types $p$ and $q$ are more frequent in the native ensemble.
 
 Another important consideration when constructing SPARC was chain connectivity, since it is presumed that amino acids adjacent to each other along the peptide backbone interact differently (due to the presence of connecting covalent bonds) than non-consecutive residues.
 Therefore, the consecutive and non-consecutive amino acids found within the 10-\AA\, shell were separated and analyzed separately, producing two distinct score functions $S_c$ and $S_{nc}$.
@@ -163,7 +157,7 @@ Therefore, the consecutive and non-consecutive amino acids found within the 10-\
 \subsection{Solvent interaction model}
 In a simplified sense, the intermolecular interactions that determine the stability of a protein structure can be decomposed into those between residues and those between residues and the solvent.
 The latter interactions cannot be modeled by orientation in an implicit solvent, so they are collectively modeled by SPARC in terms of the ``coordination number'' or packing density of the residues.
-This approximation is similar to the coordination numbers used by Miyazawa and Jernigan \cite{miyazawa}; however, instead of calculating the values indirectly from the volume of each residue type, we simply count the number of amino acids within the contact sphere.
+This approximation is similar to the coordination numbers used by Miyazawa and Jernigan \cite{miyazawa}; however, instead of calculating the values indirectly from the volume of each residue type, we are able to count the number of amino acids within the contact sphere because of the large sample size and variety in our structures (see section \ref{materials}).
 The analog for eq. (\ref{sparc_equation}) for the solvent interactions then becomes
 
 \begin{equation}
@@ -175,8 +169,49 @@ where $A_p^*$ represents the set of amino acids within the cutoff distance and $
 The energylike quantities represented by $S_c$, $S_{nc}$, and $S_\text{solv}$ are finally added together to produce an overall SPARC score value.
 
 \subsection{Dynamic Monte Carlo simulation}
+The statistical nature of SPARC makes it especially conducive to a Markov chain Monte Carlo (MCMC) simulation because it provides direct local stability comparisons which can be used to sample the conformational space.
+Monte Carlo simulations have been used with some frequency to predict protein structure \cite{kolinski,enciso}, though not as often or as successfully as deterministic molecular dynamics (MD).
+The most widely-used MCMC technique is the Metropolis-Hastings algorithm, which uses a weighted form of rejection sampling to approximate a distribution over a large number of iterations \cite{metropolis}.
+We utilize a modified version of the Metropolis-Hastings algorithm based on the distribution of relative orientations in SPARC.
+
+An overview of the simulation algorithm is presented in Fig. \ref{flowchart}.
+
+\begin{figure}
+\begin{center}
+	\begin{tikzpicture}[scale=0.7, every node/.style={scale=0.7}]
+	\draw [->, >=stealth] (0,-1.5) -- (0, -2);
+	\draw [->, >=stealth] (0,-2.5) -- (0, -3.6);
+	\draw [->, >=stealth] (0,-4.5) -- (0, -5.2);
+	\draw [->, >=stealth] (0,-5.8) -- (4.2, -5.8);
+	\draw [->, >=stealth] (6, -5.8) -- (6, -3);
+	\draw [->, >=stealth] (3.6, -2.6) -- (2, -2.6);
+	\draw [->, >=stealth] (6, -6.6) -- (6, -7.7);
+	\draw [->, >=stealth] (6, -8.7) -- (1.6, -8.7);
+	\draw (6, -8.7) -- (6, -10) --(-3, -10)  -- (-3, -8.7);
+	\draw [->, >=stealth] (0, -8.7) -- (-3, -8.7) -- (-3, -2.6) -- (-2, -2.6);
+	\draw [->, >=stealth] (0, -10) -- (0, -10.5);
+	
+	\node [draw, rounded rectangle, fill=white] at (0, -1.2) {Input: random coil};
+	\draw [fill=white,text width=3.8cm,align=center] (-2,-2) rectangle (2,-3.2) node[pos=.5] {Choose a segment of the protein to ``mutate''};
+	\draw [fill=white,text width=3cm,align=center] (-1.6,-3.6) rectangle (1.6,-4.8) node[pos=.5] {Generate possible conformations};
+	\draw [fill=white,text width=4.5cm,align=center] (-2.4,-5.2) rectangle (2.4,-6.4) node[pos=.5] {Choose a conformation, weighted by energy $\sum S(\textbf{x})$};
+	\node [draw, diamond, fill=white, aspect=2] at (6, -5.8) {Disconnected?};
+	\node [fill, white, rectangle, text=black] at (6, -4) {Yes};
+	\node [fill, white, rectangle, text=black] at (6, -7.2) {No};
+	\node [draw, diamond, fill=white, aspect=2] at (6, -8.7) {Steric violation?};
+	\draw [fill=white,text width=4.4cm,align=center] (3.6,-2.2) rectangle (8.4,-3) node[pos=.5] {Move to adjacent segments};
+	\node [fill, white, rectangle, text=black] at (3, -8.7) {Yes};
+	\node [fill, white, rectangle, text=black] at (3, -10) {No};
+	\draw [fill=white,text width=3cm,align=center] (-1.6,-8.1) rectangle (1.6,-9.3) node[pos=.5] {Revert to last conformation};
+	\node [draw, rounded rectangle, fill=white] at (0, -10.8) {End after specified \# of iterations};
+	\end{tikzpicture}
+\end{center}
+	\label{flowchart}
+	\caption{An overview of a Markov chain Monte Carlo (MCMC) simulation algorithm developed using SPARC. The procedure is similar to that of the Metropolis-Hastings algorithm in that new structures are sampled so that better-scoring conformations are chosen more often.}
+\end{figure}
 
 \subsection{Materials and software}
+\label{materials}
 All calculations and programs were run on an off-the-shelf laptop computer and a desktop.
 Written in Python 2.7 and comprising about 6,000 lines of code, this first version of the SPARC software contains tools for reading and writing PDB files, analyzing structures for orientation data directly from the Protein Data Bank, and running the dynamic Monte Carlo simulations as well as other utilities, with all modules designed to be subclassable and extendible for future modifications.
 
