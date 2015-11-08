@@ -1,4 +1,4 @@
-\documentclass[11pt]{article}
+\documentclass[11pt,titlepage]{article}
 
 % Pretty much all of the ams maths packages
 \usepackage{amsmath,amsthm,amssymb,amsfonts}
@@ -145,7 +145,7 @@ We choose the pair that maximizes the angle between \textbf{i} and \textbf{c}, w
 \subsection{From orientational frequencies to energies}
 The Cartesian LCS for each amino acid enables us to describe the relative orientation between any two amino acids $\textbf{p}$ and $\textbf{q}$ as simply the coordinates of $\textbf{p}$ in the LCS of $\textbf{q}$, denoted $\textbf{p}_q$, and vice versa.
 To obtain a distribution of relative orientations for each sidechain type, we consider only those amino acids within a contact sphere of radius 10 \AA\, of each residue, a set we denote $A^*$.
-The orientation space is coarse-grained into intervals of 1 \AA\, for a total of 8,000 possible ``bins'' into which each relative location might fall.
+The orientation space is coarse-grained into intervals of 1 \AA\, for a total of 8,000 possible ``bins'' into which each relative location might fall. (Because the contact shell is spherical and contained within a rectangular orientation space, in reality only about 4,200 bins would be used.)
 
 As in all statistical potentials, SPARC assumes that these pairwise orientations follow the Boltzmann distribution in an ensemble of native protein structures \cite{sippl}, motivated by the fact that even at a free energy minimum, unstable \textit{local} structures can still be found.
 This permits us to adapt Eq. (\ref{boltzmann_device}) to calculate a dimensionless energylike quantity from the orientational frequencies:
@@ -243,6 +243,49 @@ Written in Python 2.7 and comprising about 6,000 lines of code, this first versi
 To calculate the orientational frequencies, a large dataset of native protein structures determined using X-ray crystallography (91,995 total structures) was obtained from the Protein Data Bank.
 
 \section{Results}
+\subsection{Frequency distributions}
+\begin{figure}
+	\begin{center}
+		\includegraphics[trim={0 3cm 0 3cm}, clip=true, width=0.45\textwidth]{consec_alpha_frequencies}\,\,\,\,\,
+		\includegraphics[trim={0 3cm 0 3cm}, clip=true, width=0.45\textwidth]{nonconsec_alpha_frequencies}
+		\caption{A portion of the distribution of C$_\alpha$ relative locations between two alanine residues, consecutive (left) and non-consecutive (right). The consecutive distribution is much more specific due to the constraints imposed by peptide bond, while the nonconsecutive distribution permits many more possible locations.}
+		\label{alpha_frequencies}
+	\end{center}
+\end{figure}
+The large sample size of proteins used to construct SPARC allowed us to establish fairly small bins without considerable loss in accuracy.
+For consecutive amino acids, it was expected that the vast majority of relative orientations would be located in a small number of bins, corresponding to the allowed angles of the peptide bond; this hypothesis was confirmed in Fig. \ref{alpha_frequencies}, left.
+On average, 505 bins were filled and only 27 had more than 50 occurrences.
+The nonconsecutive distributions showed much more variability, also as expected because of the lack of a restrictive covalent bond (Fig. \ref{alpha_frequencies}, right): 4,032 bins were filled, almost all of the ~4,200 possible bins.
+
+While other techniques we attempted (orientations with respect to nearby residues, distance to the geometric center of the protein) failed to capture hydrophobicity sufficiently, the coordination-number approach does seem to accurately reflect the conventional hydrophobicity scale reported by Kyte and Doolittle \cite{kyte}.
+Fig. \ref{hydrophobicities} illustrates the distributions of coordination numbers or packing densities around each amino acid type.
+Nonpolar residues such as Ile and Val, the red curves, show a clear preference for a greater packing density (both Ile and Val had 21 residues within the contact shell on average).
+Overall, the mean coordination numbers agreed with the Kyte-Doolittle ranking scale with a correlation coefficient $R^2=0.75$. 
+The main exceptions to this correlation were Trp and Tyr, which appeared more hydrophobic on the SPARC scale than they are conventionally described, and three of the charged amino acids (Lys, Asp, and Glu), which appeared more hydrophilic.
+These distributions were therefore useful in the simulation because the energy with respect to polarity of a specific residue could be easily approximated according to the coordination number distribution for the sidechain type.
+
+\begin{figure}
+	\begin{center}
+	\includegraphics[trim={4cm 0cm 4cm 0cm}, height=0.8\textwidth,angle=-90]{hydrophobicity_graph}
+	\end{center}
+	\caption{The distributions of coordination numbers of each amino acid type, scaled from 1--10. The Kyte-Doolittle hydrophobicity values are given in parentheses; the blue hues are more polar residue types, and the red hues are more nonpolar.}
+	\label{hydrophobicities}
+\end{figure}
+
+
+\begin{figure}
+	\begin{center}
+		\includegraphics[trim=1cm 8cm 1cm 8cm, width=0.7\textwidth,keepaspectratio]{hydrophobicity_correlation}
+	\end{center}
+	\caption{A comparison of the Kyte and Doolittle hydrophobicity scale and the SPARC coordination number approach illustrates the correlation ($R^2=0.75$) between the packing density of residues within the structure and their polarity.}
+	\label{hydrophobicity_corr}
+\end{figure}
+
+\subsection{Validation through CHARMM}
+
+\subsection{Testing with decoy sets}
+
+\subsection{Simulation of a small globular protein}
 
 \section{Discussion}
 
