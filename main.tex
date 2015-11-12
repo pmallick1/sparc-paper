@@ -59,12 +59,13 @@
 
 %opening
 \title{A Novel Orientation-Dependent Potential for \\Protein Structure Prediction}
-\author[1]{Venkatesh Sivaraman}
-\author[2,3]{Eshel Faraggi}
-\author[3]{Andrzej Kloczkowski}
-\affil[1]{Bexley High School}
-\affil[2]{Indiana University School of Medicine}
-\affil[3]{Nationwide Children's Hospital}
+\author{Venkatesh Sivaraman}
+%\author[2,3]{Eshel Faraggi}
+%\author[3,4]{Andrzej Kloczkowski}
+%\affil[1]{Bexley High School}
+%\affil[2]{Indiana University School of Medicine}
+%\affil[3]{Nationwide Children's Hospital}
+%\affil[4]{The Ohio State University}
 
 \begin{document}
 
@@ -75,7 +76,7 @@
 \begin{abstract}
 Protein structure prediction is one of the major unsolved problems in computational biology, primarily due to the inefficiency and short time scales of detailed simulations. We describe a novel statistical potential, called Segmented Positional Analysis of Residue Contacts (SPARC), which approximates the energy of a protein structure based on orientational inter-residue interactions as well as a packing density-like hydrophobicity term. Relative orientations are measured from a sample of 91,995 structures from the Protein Data Bank. The accuracy of SPARC is demonstrated first by comparison to CHARMM, a physics-based force field, and then to other statistical potentials on the gapless threading problem. SPARC showed an accuracy of 68\%, superior to a distance-dependent method and comparable to GOAP, an all-atom anisotropic potential.
 
-In addition to the new statistical potential, a novel adaptation of the Metropolis-Hastings algorithm has been designed for conducting Monte Carlo simulations of protein folding. The new method dynamically segments the protein into clusters to control variability and selects conformations with ``permissible'' orientations to ensure chain connectivity. We apply this algorithm to the structure prediction of bovine pancreatic trypsin inhibitor, yielding a structure with root mean square deviation of 1.08 nm from the native structure after only 2,000 iterations. Together, SPARC and the new simulation technique will help biologists study the causes of protein folding disorders, model enzyme behavior, and engineer new proteins.
+In addition to the new statistical potential, a novel adaptation of the Metropolis-Hastings algorithm was designed for conducting Monte Carlo simulations of protein folding. The new method dynamically segments the protein into clusters to control variability and selects conformations with ``permissible'' orientations to ensure chain connectivity. We apply this algorithm to the structure prediction of bovine pancreatic trypsin inhibitor, yielding a structure with root mean square deviation of 8.78 \AA\, from the native structure after only 2,000 iterations. Together, SPARC and the new simulation technique will help biologists study the causes of protein folding disorders, model enzyme behavior, and engineer new proteins.
 \end{abstract}
 
 \section{Introduction}
@@ -92,11 +93,11 @@ These atomistic potentials can be made coarse-grained by modeling residues as on
 However, physics-based potentials necessitate either the inclusion of explicit solvent molecules in the simulation \cite{onufriev} or the use of implicit solvent techniques such as the generalized Born/solvent-accessible surface area (GBSA) model \cite{feig,roux}.
 This tends to render all-atom force fields computationally inefficient if not intractable in large-scale molecular dynamics (MD) applications.
 
-The second type of energy function, knowledge-based potentials (KBPs), have developed as an approximative substitute for physics-based potentials and are more efficient at comparative tasks such as the gapless threading problem, which involves choosing the most likely native structure out of a series of candidates \cite{thomas2}.
+Knowledge-based potentials (KBPs) have developed as an approximative substitute for physics-based potentials and are more efficient at comparative tasks such as the gapless threading problem, which involves choosing the most likely native structure out of an ensemble of candidates \cite{thomas2}.
 KBPs, also known as ``statistical potentials,'' are based on statistical analysis of known protein structures rather than distinct physical or chemical interactions. 
 The use of KBPs was pioneered by Tanaka and Scheraga \cite{tanaka}, then Miyazawa and Jernigan \cite{miyazawa}, who estimated inter-residue interaction energies by counting contacts (pairs of residues located within a certain cut-off distance of each other) between types of amino acids in known protein structures.
 
-The underlying assumption in assembling these statistical energy functions is that the known structures, usually obtained by X-ray crystallography or NMR, correspond to equilibrium states \cite{buchete2003}. 
+The underlying assumption in assembling these statistical energy functions is that the known structures, obtained by X-ray crystallography or NMR, correspond to equilibrium states \cite{buchete2003}. 
 As a consequence, the frequency of a local structure (e.g. a contact, distance, or relative orientation) can be related to its conformational energy according to the Boltzmann distribution.
 This yields the following commonly-used expression for calculating energies by statistical analysis:
 
@@ -109,7 +110,7 @@ where $s$ represents a local conformation, $k$ is Boltzmann's constant, $T$ is t
 
 Beyond contact potentials, various methods have also been developed based on the distribution of Euclidean distances between residues, such as DOPE \cite{shen}, DFIRE \cite{zhou}, GOAP \cite{zhou2}, and others \cite{lu,zhang}.
 A few studies have incorporated anisotropic factors by comparing the orientations of the sidechains \cite{zhang3,mukherjee} or by measuring polar, spherical and/or Euler angles between two contacting residues \cite{miyazawa2,buchete2003}. 
-In general orientation-dependent energy terms based on bond angles are also combined with dedicated distance-dependent components, though the additivity of statistical energy terms concerning orientation and distance has been questioned \cite{shen}.
+In general orientation-dependent energy terms based on bond angles are also combined with dedicated distance-dependent components, though the additivity of these conceptually distinct quantities has been questioned \cite{shen}.
 Moreover, these statistical potentials may be limited by their concern with only the backbone or the sidechains, as well as failure to consider the tendency of hydrophobic residues to move toward the protein core \cite{mullinax}.
 
 This paper presents a new anisotropic statistical potential, called Segmented Positional Analysis of Residue Contacts (SPARC), that addresses concerns with other statistical methods by generalizing the expression of amino acid orientations through local coordinate system transformations.
@@ -139,19 +140,26 @@ SPARC is then evaluated based on its performance on the gapless threading proble
 \subsection{Construction of local coordinate system}
 Given a protein $A$ of $n$ amino acids, we can assign a Cartesian local coordinate system (LCS) to each residue to quantify its orientation with respect to an arbitrary global coordinate system (GCS).
 To determine a set of basis vectors that is consistent across all 20 sidechain types, we turn to the ideal bond angles predicted by valence-shell electron-pair repulsion (VSEPR) theory \cite{gillespie}.
-As shown in Fig. \ref{aminoacid_axes}, the bond geometry around the C$_\alpha$ atom is approximately tetrahedral, with bond angles of $\cos^{-1}{1/3}\approx 109.5^\circ$.
+As shown in Fig. \ref{aminoacid_axes}, the bond geometry around the C$_\alpha$ atom is approximately tetrahedral, with bond angles of $\cos^{-1}{-1/3}\approx 109.5^\circ$.
 
 Defining $\textbf{n}$ and $\textbf{c}$ as the normalized vectors in the GCS pointing from C$_\alpha$ to the amine nitrogen and carbonyl carbon, respectively, we define $\textbf{j} \equiv \pm(\textbf{n} - \textbf{c})$, with the sign that minimizes the angle between \textbf{j} and \textbf{c}.
 We proceed with the \textbf{k} vector, which should lie along the bond leading to the sidechain (or a hydrogen atom in the case of glycine).
-Solving for \textbf{k} from the bond angles between \textbf{c} and \textbf{n} yields two solutions, each of which has an associated vector $\textbf{i}=\textbf{j}\times\textbf{k}$.
-We choose the pair that maximizes the angle between \textbf{i} and \textbf{c}, which produces an LCS consistent with Fig. \ref{aminoacid_axes}.
+Solving for a unit vector \textbf{k} from its bond angles with \textbf{c} and \textbf{n},
+
+\begin{align*}
+\textbf{n}\cdot\textbf{k} &= -1/3
+\\ \textbf{c}\cdot\textbf{k} &= -1/3
+\end{align*}
+
+we obtain two solutions, each of which has an associated vector $\textbf{i}=\textbf{j}\times\textbf{k}$.
+The pair that maximizes the angle between \textbf{i} and \textbf{c} produces an LCS consistent with Fig. \ref{aminoacid_axes}.
 
 \subsection{From orientational frequencies to energies}
 The Cartesian LCS for each amino acid enables us to describe the relative orientation between any two amino acids $\textbf{p}$ and $\textbf{q}$ as simply the coordinates of $\textbf{p}$ in the LCS of $\textbf{q}$, denoted $\textbf{p}_q$, and vice versa.
 To obtain a distribution of relative orientations for each sidechain type, we consider only those amino acids within a contact sphere of radius 10 \AA\, of each residue, a set we denote $A^*$.
 The orientation space is coarse-grained into intervals of 1 \AA\, for a total of 8,000 possible ``bins'' into which each relative location might fall. (Because the contact shell is spherical and contained within a rectangular orientation space, in reality only about 4,200 bins would be used.)
 
-As in all statistical potentials, SPARC assumes that these pairwise orientations follow the Boltzmann distribution in an ensemble of native protein structures \cite{sippl}, motivated by the fact that even at a free energy minimum, unstable \textit{local} structures can still be found.
+As in all statistical potentials, SPARC assumes that these pairwise orientations are Boltzmann-distributed in an ensemble of native protein structures \cite{sippl}, motivated by the fact that even at a global energy minimum, unstable \textit{local} structures can still be found.
 This permits us to adapt Eq. (\ref{boltzmann_device}) to calculate a dimensionless energylike quantity from the orientational frequencies:
 \begin{equation}
 \displaystyle
@@ -164,14 +172,14 @@ $\bar{f}_\text{tot}$ is the mean number of contacts over all combinations of ami
 The result of this formulation is that contacts whose relative orientations are above average receive a more negative (stable) score.
 Furthermore, for a perfectly ``average'' orientation, a more negative score will result if contacts between amino acid types $p$ and $q$ are more frequent in the native ensemble.
 
-Another important consideration when constructing SPARC was chain connectivity, since it is presumed that amino acids adjacent to each other along the peptide backbone interact differently (due to the presence of connecting covalent bonds) than non-consecutive residues.
+Another important consideration when constructing SPARC was chain connectivity, since amino acids adjacent to each other along the peptide backbone interact differently (due to the presence of connecting covalent bonds) than non-consecutive residues.
 Therefore, the consecutive and non-consecutive amino acids found within the 10-\AA\, shell were separated and analyzed separately, producing two distinct score functions $S_c$ and $S_{nc}$.
 
 \subsection{Solvent interaction model}
-In a simplified sense, the intermolecular interactions that determine the stability of a protein structure can be decomposed into those between residues and those between residues and the solvent.
-The latter interactions cannot be modeled by orientation in an implicit solvent, so they are collectively modeled by SPARC in terms of the ``coordination number'' or packing density of the residues.
-This approximation is similar to the coordination numbers used by Miyazawa and Jernigan \cite{miyazawa}; however, instead of calculating the values indirectly from the volume of each residue type, we are able to count the number of amino acids within the contact sphere because of the large sample size and variety in our structures (see section \ref{materials}).
-The analog for eq. (\ref{sparc_equation}) for the solvent interactions then becomes
+In an implicit solvent, the intermolecular interactions that determine the stability of a protein structure can be decomposed into residue-residue and residue-solvent interactions.
+The latter cannot be modeled by orientation in an implicit solvent, so they are collectively modeled by SPARC in terms of the ``coordination number'' or packing density of the residues.
+This approximation is similar to the coordination numbers used by Miyazawa and Jernigan \cite{miyazawa}; however, instead of calculating the values indirectly from the volume of each residue type, we count the number of amino acids within the contact sphere (see section \ref{materials}).
+The analog for Eq. (\ref{sparc_equation}) for the solvent interactions then becomes
 
 \begin{equation}
 S_{\text{solv}}(\textbf{p}) = -\ln{\frac{f(|A_p^*|)}{\bar{f}_p}},
@@ -223,9 +231,8 @@ The most widely-used MCMC technique is the Metropolis-Hastings algorithm, which 
 We implement a modified version of the Metropolis-Hastings algorithm based on the distribution of relative orientations in SPARC, which should improve the speed and viability of Monte Carlo methods for protein structure prediction.
 
 An overview of the simulation algorithm is presented in Fig. \ref{flowchart}.
-During each iteration, segments containing 1--5 residues are chosen at random, with short segment lengths favored in unstable structures and longer segments favored in stable structures.
-This allows us to control the preservation of locally-stabilizing interactions.
-The SPARC scores of each possible ``mutation'' to the chosen segment are transformed into probabilities:
+During each iteration, segments of length $\ell$ are chosen at random, where $\ell$ is an initial parameter.
+The SPARC scores of each possible ``mutation'' to the chosen segment can be transformed into probabilities:
 
 \begin{equation}
 P(C) = \exp{\left(-\sum_{\textbf{a}_i\in C}S(\textbf{a}_i)\right)}
@@ -245,7 +252,7 @@ Written in Python 2.7 and comprising about 6,000 lines of code, this first versi
 
 To calculate the orientational frequencies, a large dataset of native protein structures determined using X-ray crystallography (91,995 total structures) was obtained from the Protein Data Bank.
 When performing relative orientation calculations, a hash table is utilized to map the amino acids into spatial ``buckets'' of dimension 5 \AA\, based on the location of the $\alpha$-carbon.
-This resulted in a major performance improvement over searching the entire protein conformation for pairwise contacts, from $O(n)$ for each calculation to $O(1)$.
+This results in a major performance improvement over searching the entire protein conformation for pairwise contacts, from $O(n)$ for each calculation to $O(1)$.
 
 \section{Results}
 \subsection{Frequency distributions}
@@ -287,17 +294,19 @@ Regardless of the relative magnitudes of the means, the distributions proved use
 \end{figure}
 
 \subsection{Validation with CHARMM}
-The correlation between knowledge-based potentials (KBPs) and all-atom force fields such as CHARMM is often tenuous because of the thermodynamic assumptions that are made on the native ensemble \cite{mullinax}, although some reports have demonstrated good correlations between the force fields and their potentials \cite{mohanty,basdevant}.
-While SPARC is constructed on similar principles to many other KBPs, we hypothesized that because of the combination of the orientation-based residue interaction model and a solvent interaction term, it would correlate closely with the detailed all-atom potentials.
-This was tested according to the procedure used by Basdevant et al. \cite{basdevant}, which is based on the structure of the small antimicrobial protein magainin (PDB code 1DUM), consisting of two $\alpha$-helices in anti-parallel as shown in Fig. \ref{magainin}.
-The B-chain was translated incrementally in both the $xy$ and the $yz$ directions; for each distance, the SPARC inter-residue scores were calculated as well as the all-atom potentials using the CHARMM27 force field \textit{in vacuo} in the GROMACS command-line tool \cite{gromacs}.
-The structures were relaxed first using a short MD simulation to prevent extremely high CHARMM energy values.
 
 \begin{wrapfigure}{r}{0.4\textwidth}
 	\includegraphics[trim={0 5cm 0 5cm}, clip=true, width=0.4\textwidth]{magainin_structure}
 	\caption{The structure of magainin, a small antimicrobial protein. The distance between the two chains is varied to compare the scores yielded by CHARMM and SPARC.}
 	\label{magainin}
 \end{wrapfigure}
+
+The correlation between knowledge-based potentials (KBPs) and all-atom force fields such as CHARMM is often tenuous because of the thermodynamic assumptions that are made on the native ensemble \cite{mullinax}, although some reports have demonstrated good correlations between the force fields and their potentials \cite{mohanty,basdevant}.
+While SPARC is constructed on similar principles to many other KBPs, we hypothesized that because of the combination of the orientation-based residue interaction model and a solvent interaction term, it would correlate closely with the detailed all-atom potentials.
+This was tested with a procedure similar to that used by Basdevant et al. \cite{basdevant}, based on the structure of the small antimicrobial protein magainin (PDB code 1DUM).
+The magainin structure consists of two antiparallel $\alpha$-helices, as shown in Fig. \ref{magainin}.
+The B-chain was translated incrementally in both the $xy$ and the $yz$ directions; for each distance, the SPARC inter-residue scores were calculated as well as the all-atom potentials using the CHARMM27 force field \textit{in vacuo} in the GROMACS command-line tool \cite{gromacs}.
+The structures were relaxed first using a short MD simulation to prevent extremely high CHARMM energy values.
 
 The comparison revealed an interesting relationship between the CHARMM and SPARC potential values.
 As shown in Fig. \ref{magainin_graphs}, the SPARC score mimics the contours of the logarithm of the physics-based potential, especially in the $xy$-direction.
@@ -314,14 +323,14 @@ This could be due to a lack of resolution in unstable structures, which obviousl
 \subsection{Evaluation with gapless threading}
 The most common way to assess the discriminating ability of a statistical potential is through its performance on the gapless threading problem: to identify the most stable conformation out of an ensemble of ``decoy'' structures onto which the same amino acid sequence is threaded.
 These databases vary considerably in difficulty, so SPARC was tested on decoy sets from the Decoys 'R' Us database \cite{samudrala} as well as the I-TASSER Decoy Set II \cite{zhang}.
-The decoy sets vary in size as well; \_ is the largest with \_ decoys per structure on average.
 
 In Table \ref{decoy_table}, we present the results of this test alongside the published statistics of other statistical potentials.
-GOAP \cite{zhou2} and Miyazawa \& Jernigan \cite{miyazawa2} are anisotropic potentials, using conceptually similar approaches to SPARC but at a more fine-grained level.
+GOAP \cite{zhou2} is an anisotropic potential that uses a conceptually similar approach to SPARC but with orientations determined by heavy atoms in each residue.
 (The potential developed by Buchete et al. \cite{buchete2003,buchete3} is coarse-grained like SPARC, but the numerical accuracies on these decoy sets were not given in the original publication.)
 For comparison with non-orientational methods we include DFIRE, an all-atom distance-dependent potential that utilizes a distance-scaled ideal gas reference state.
+Overall, SPARC achieved an accuracy of 68\%, compared to 48.9\% by DFIRE and 80.1\% by GOAP.
 
-Because the energylike quantities obtained from Eqs. (\ref{sparc_equation}) and (\ref{solvent_equation}) cannot necessarily be added together, a weighting procedure was performed to determine the optimum linear combination of the three energy terms (consecutive, nonconsecutive, and solvent).
+Because the energylike quantities obtained from Eqs. (\ref{sparc_equation}) and (\ref{solvent_equation}) are obtained differently and cannot simply be added together, a weighting procedure was performed to determine the optimum linear combination of the three energy terms (consecutive, nonconsecutive, and solvent).
 The integer weights that yielded the highest number of correct native structures was 4 for consecutive, 9 for nonconsecutive, and 3 for solvent interactions.
 
 \begin{table}
@@ -342,7 +351,7 @@ The integer weights that yielded the highest number of correct native structures
 		\bottomrule
 	\end{tabular}
 	\end{center}
-	\caption{SPARC was tested on the gapless threading problem, which entails predicting the native structure out of an ensemble of decoys ``threaded'' with the same structure. The decoy sets vary in size and difficulty, but overall SPARC was superior in accuracy to the distance-dependent DFIRE potential (data obtained from \cite{zhou2}) and slightly inferior to GOAP, an all-atom orientation-based potential.}
+	\caption{SPARC was tested on the gapless threading problem, which entails predicting the native structure out of an ensemble of decoys ``threaded'' with the same structure. The decoy sets vary in size and difficulty, but overall SPARC was superior in accuracy to the distance-dependent DFIRE potential (data obtained from \cite{zhou2}) and slightly inferior to GOAP, an all-atom orientation-based potential. The numbers given in parentheses are Z-scores for the native structure; more negative values are better.}
 	\label{decoy_table}
 \end{table}
 
@@ -352,19 +361,19 @@ In Fig. \ref{rms_graphs}, two characteristic RMSD graphs are shown for the CASP1
 
 \begin{figure}
 	\begin{center}
-	\includegraphics[height=0.7\textwidth, angle=-90, trim=5cm 0 5cm 0]{rmsd_graph}
+	\includegraphics[height=0.8\textwidth, angle=-90, trim=5cm 0 5cm 0]{rmsd_graph}
 	\end{center}
 	\caption{Two illustrative root-mean-square deviation (RMSD) graphs from the CASP11 set. In the left graph (PDB 2MQ8), there is a clear correlation between the RMSD and the energy score. However, in the right graph (PDB 4Q5T), a conformation cluster at around RMSD = 2 nm appears more stable than the native structure. See Discussion.}
 	\label{rms_graphs}
 \end{figure}
 
 \subsection{Simulation of a small globular protein}
-Using the weighted potential terms from the decoy set results, we apply SPARC to \textit{ab initio} protein structure prediction.
+Using the weighted potential terms from the decoy set results, we applied SPARC to \textit{ab initio} protein structure prediction.
 Bovine pancreatic trypsin inhibitor (BPTI, PDB code 1QLQ), a 58-amino acid protein, was chosen for this study because of its simple structure (two $\alpha$-helices and a pair of antiparallel $\beta$-strands) and because it is conventional for testing protein structure prediction algorithms.
 
 First, the effect of manipulating the segment length $\ell$ was tested on the BPTI structure by running 500 iterations at segment lengths from 1--5.
 The average, minimum, and variance of the energy scores are given in Table \ref{segment_length_table}.
-The mean energy over the course of the simulation increases sharply at $\ell=4$, and while the minimum is not affected, the variance shows a stark increase with $\ell$ until 5.
+The mean energy over the course of the simulation increases sharply at $\ell=4$, and while the minimum is not affected, the variance shows a stark increase until $\ell=5$.
 
 \begin{table}
 	\begin{center}
@@ -382,17 +391,17 @@ The mean energy over the course of the simulation increases sharply at $\ell=4$,
 	\label{segment_length_table}
 \end{table}
 
-According with this increase in variance with increasing segment length, a random selector was designed to choose a certain value of $\ell$ with a weight proportional to
+In accordance with this increase in variance with increasing segment length, a random selector was designed to choose a certain value of $\ell$ with a weight proportional to
 
 \begin{equation}
 -\frac{1}{9}\left(x-e^{\frac{4}{225}S+2}\right)^2+4,
 \end{equation}
 
 which favors slightly greater segment lengths when the potential energy score $S$ is high.
-In addition, the behavior of the simulation was split into two modes, dubbed ``erratic'' and ``gentle;'' the erratic mode helps prevent the simulation from being trapped in local energy minima, and the gentle mode refines the structure to cultivate more stable interactions.
+In addition, the behavior of the simulation was split into two modes, dubbed ``erratic'' and ``gentle''; the erratic mode helps prevent the simulation from being trapped in local energy minima, and the gentle mode refines the structure to cultivate more stable interactions.
 
-After 2,000 iterations, the SPARC energy scores followed the curve shown in Fig. \ref{simulation_scores}. 
-The result closest to the native structure in RMSD was found at the 1,278th iteration, with a score of -106.4 (compared to -140.9 for the native structure).
+Over 2,000 iterations, the SPARC energy scores followed the curve shown in Fig. \ref{simulation_scores}. 
+The result closest to the native structure in terms of RMSD was found at the 1,278th iteration with a score of -106.4 and RMSD 8.78 \AA\,, compared to -140.9 for the native structure.
 As intended, the ``erratic'' and ``gentle'' modes produced markedly different energy patterns; gentle groups of iterations were relatively inflexible and tended to decrease the energy scores slightly, while erratic iterations were more chaotic (average variance 60.0 compared to 365.6).
 
 \begin{figure}
@@ -407,7 +416,7 @@ As intended, the ``erratic'' and ``gentle'' modes produced markedly different en
 	\begin{center}
 		\includegraphics[width=0.6\textwidth, trim=0 5.5cm 0 5.5cm, clip=true]{bpti_structures}
 	\end{center}
-	\caption{Comparison of the native structure of BPTI (left) with the closest structure (RMSD = 1.08 nm) predicted by SPARC and the Monte Carlo simulation. There are clear differences in the predicted conformation, but the beginnings of secondary structure and the formation of contacts can be seen.}
+	\caption{Comparison of the native structure of BPTI (left) with the closest structure predicted by SPARC and the Monte Carlo simulation (right, RMSD = 8.78\AA). There are clear differences in the predicted conformation, but the beginnings of secondary structure and the formation of contacts can be seen.}
 	\label{bpti_structures}
 \end{figure}
 
@@ -417,19 +426,15 @@ When designing a coarse-grained approach to any algorithmic task, it is importan
 Current potentials range from all-atom \cite{basdevant} to solely contact-based \cite{buchete2}, but SPARC uniquely captures the orientational stability without losing the performance of a coarse-grained method.
 
 SPARC runs quickly once the distributions are calculated, but the construction of the potential itself was extremely time-consuming, taking roughly two weeks to compute all of the relative orientations in the 91,995-structure sample on the two machines.
-The additional time spent analyzing this dataset (which is an order of magnitude larger than the sets used for other potentials) improved the potential's resolution, since it better differentiated the low-frequency bins.
-The correlations between CHARMM and SPARC on the magainin test did show some lack of definition for CHARMM energies greater than [], but these extremely high energies would be rare in a simulation.
-One major change that would improve the accuracy of SPARC even further, at the expense of performance, would be to combine the relative orientations in each LCS as they occurred in the native ensemble.
+The additional time spent analyzing this dataset (which is an order of magnitude larger than the sets used for most other potentials) improved the potential's resolution, since it better differentiated the low-frequency bins.
+The correlations between CHARMM and SPARC on the magainin test did show some lack of definition for CHARMM energies greater than $10^{20}$ kcal/mol, but these extremely high values would be rare in a simulation.
+One major change that would improve the accuracy of SPARC, at the expense of performance, would be to combine the relative orientations in each LCS as they occurred in the native ensemble.
 As Eq. (\ref{sparc_equation}) shows, the frequencies from each residue's LCS are added independently, when in reality certain orientations are likely to be conditional to specific orientations of the other residue.
 We did not implement this change because it would effectively have squared the potential tables' memory requirement; however, it could be an area for extension in a future version.
 
 The comparison of CHARMM and SPARC using the magainin protein illustrates a clear correspondence between the scores given by each potential.
-These simulations were performed \textit{in vacuo}, so the CHARMM energies should strictly consist of bonded, electrostatic, and van der Waals interactions.
 Given the diversity of the terms which compose an all-atom potential, it is remarkable that the solely statistical SPARC model is able to approximate the contours of the CHARMM energy function.
-Also notable is that SPARC fits the \emph{logarithm} of the physics-based potential; this was probably due to the extreme outliers in the CHARMM scores when a steric clash occurred.
-
-The test to identify the native structures in the gapless threading problem illustrates SPARC's strengths and weaknesses in comparison to similar knowledge-based methods.
-SPARC achieved an accuracy of 68\%, compared to 48.9\% by DFIRE and 80.1\% by GOAP.
+The gapless threading test illustrated a similar trend, but here in comparison to more similar knowledge-based methods.
 DFIRE, a distance-dependent potential, was less effective than either of the two anisotropic potentials, confirming that distance alone is not sufficient to describe the energy of a protein.
 (The same was found in the test with magainin, where distances varied in different directions resulted in different energy curves.)
 GOAP, which is based on orientations of heavy atoms within each amino acid as well as atomic distances, has a higher accuracy than SPARC, most likely because of its all-atom components.
@@ -446,21 +451,28 @@ The experiments with segment length, as well as other tests, allowed us to proba
 In the dynamically-adjusted simulation of BPTI, the energy scores become much steadier and the conformation is conserved to a greater extent when the algorithm recognizes it as being stable.
 However, because this simulation is not in physical time, it is appropriate that eventually the mutations interrupt the ``gentle'' iterations to experiment with other shapes.
 For instance, the native structure of BPTI gave a SPARC energy score of -140.9, and for 258 points in the run the score dropped below -140.
-However, the closest structure in terms of RMSD had a considerably higher score by SPARC, which suggests a lack of stabilizing contacts and appropriate secondary structures.
+However, the closest structure in terms of RMSD did not have a comparable energy score (-106.4), which suggests a lack of stabilizing contacts and appropriate secondary structures.
 The lowest-energy structures on the other hand, display tighter helices and even some $\beta$-sheets.
-We believe that in a longer simulation, even better conformations would appear and be refined, approaching the shape of the native structure and forming even better orientations than the experimentally-determined BPTI structure.
+We believe that in a longer simulation, even better conformations would appear and be refined, approaching the shape of the native structure and producing even better local orientations than the experimentally-determined BPTI structure.
+
+In summary, the various assessments of SPARC's accuracy suggest a definite set of strengths and weaknesses. 
+SPARC is most effective at scoring structures on a macroscopic level, such as the interaction energies between the chains of the magainin protein.
+It also proved useful for generating stable local conformations through secondary structure in the BPTI simulation; the greater weight on nonconsecutive interactions also encourages these contacts.
+The shortcoming of SPARC is that it is coarse-grained to the residue level, which is an issue if the decoy set or simulation algorithm does not account for steric clashes within the residues.
+(This could have also explained why the CHARMM and SPARC energy values did not significantly correlate for the magainin protein.)
+The end result is that SPARC and our simulation algorithm yield accurate relative assessments of structures, and with brief deterministic or fine-grained methods these assessments can be improved even further.
 
 \section{Conclusion}
 The statistical potential developed in this paper, Segmented Positional Analysis of Residue Contacts (SPARC), contains innovations in several aspects. 
 It is based on relative orientations using Cartesian local coordinate system transformations, which describe the protein structure more thoroughly than contact-based or distance-based representations.
 On the other hand, SPARC is coarse-grained, which permits it better performance at a small price in accuracy, at least on the gapless threading problem.
 SPARC was shown to replicate the contours of the energy function given by a conventional all-atom physics-based force field, and the packing density criterion correlates with a well-known hydrophobicity scale.
-Furthermore, the development of an off-lattice simulation algorithm using a novel segmentation technique proved useful for generating realistic candidate conformations in less than two thousand iterations.
+Furthermore, the development of an off-lattice simulation algorithm using a novel segmentation technique proved useful for generating realistic candidate conformations in only two thousand iterations.
 
 Using these simulation techniques and potential functions, biologists will be able to model a host of protein activities, including ligand docking, signal transduction, and nucleic acid manipulations\footnote{Nucleic acids are not currently supported by SPARC, but could be easily added with a large enough dataset of nucleotide-amino acid interactions and a simple Python subclass.}.
 In addition, this simulation algorithm could be be applied to protein design, which seeks to create protein sequences that have certain structural properties for drug design and gene therapy.
-In the future, we are considering expanding SPARC to take advantage of its flexible implicit solvent model, especially by utilizing it in the plasma membrane where the solvent varies through the environment.
-Through these adaptations, we hope to develop the orientational approach to protein structure prediction into a general research tool for modeling biomolecular systems.
+In the future, we are considering expanding SPARC to take advantage of its flexible solvent model in non-aqueous simulations, especially in the plasma membrane where the solvent varies through the environment.
+With these adaptations, we hope to develop this orientational approach to protein structure prediction into a general research tool for modeling biomolecular systems.
 
 \bibliographystyle{abbrv}
 %\nocite{*}
